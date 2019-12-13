@@ -1,0 +1,146 @@
+#
+# Copyright Altoros. All Rights Reserved.
+#
+
+version: '2'
+
+volumes:
+  peer0.b.example.com:
+  peer1.b.example.com:
+
+services:
+
+  ca.b.example.com:
+    container_name: ca.b.example.com
+    image: hyperledger/fabric-ca:latest
+    environment:
+      - FABRIC_CA_HOME=/etc/hyperledger/fabric-ca-server
+      - FABRIC_CA_SERVER_CA_NAME=ca-a
+      - FABRIC_CA_SERVER_CA_CERTFILE=/etc/hyperledger/fabric-ca-server-config/ca.b.example.com-cert.pem
+      - FABRIC_CA_SERVER_CA_KEYFILE=/etc/hyperledger/fabric-ca-server-config/c2fc01c6731f22ebadc65b4274e0b4c4bb73490c96d217339962c3e9db912965_sk
+      - FABRIC_CA_SERVER_TLS_ENABLED=true
+      - FABRIC_CA_SERVER_TLS_CERTFILE=/etc/hyperledger/fabric-ca-server-config/ca.b.example.com-cert.pem
+      - FABRIC_CA_SERVER_TLS_KEYFILE=/etc/hyperledger/fabric-ca-server-config/c2fc01c6731f22ebadc65b4274e0b4c4bb73490c96d217339962c3e9db912965_sk
+#    ports:
+#      - 8054:7054
+    command: sh -c 'fabric-ca-server start -b admin:adminpw -d'
+    volumes:
+      - ../artifacts/crypto-config/peerOrganizations/b.example.com/ca/:/etc/hyperledger/fabric-ca-server-config
+      - ../artifacts/fabric-ca-server-config-b.yaml:/etc/hyperledger/fabric-ca-server/fabric-ca-server-config.yaml
+
+  peer0.b.example.com:
+    container_name: peer0.b.example.com
+    extends:
+      file: base-intercept.yaml
+      service: peer-base
+    environment:
+      - CORE_PEER_ID=peer0.b.example.com
+      - CORE_PEER_LOCALMSPID=bMSP
+      - CORE_PEER_ADDRESS=peer0.b.example.com:7051
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb.b.example.com:5984
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer1.org1.example.com:8056
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.org1.example.com:8051
+    ports:
+      - 8051:7051
+      - 8053:7053
+    volumes:
+        - ../artifacts/crypto-config/peerOrganizations/b.example.com/peers/peer0.b.example.com/:/etc/hyperledger/crypto/peer
+        - peer0.b.example.com:/var/hyperledger/production
+    depends_on:
+      - ca.b.example.com
+      - couchdb.b.example.com
+    
+
+  peer1.b.example.com:
+    container_name: peer1.b.example.com
+    extends:
+      file: base-intercept.yaml
+      service: peer-base
+    environment:
+      - CORE_PEER_ID=peer1.b.example.com
+      - CORE_PEER_LOCALMSPID=bMSP
+      - CORE_PEER_ADDRESS=peer1.b.example.com:7051
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb.b.example.com:5984
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.org1.example.com:8051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer1.org1.example.com:8056
+    ports:
+      - 8056:7051
+      - 8058:7053
+    volumes:
+        - ../artifacts/crypto-config/peerOrganizations/b.example.com/peers/peer1.b.example.com/:/etc/hyperledger/crypto/peer
+        - peer1.b.example.com:/var/hyperledger/production
+    depends_on:
+      - ca.b.example.com
+      - couchdb.b.example.com
+    
+
+  # fabric-rest api server
+  api.b.example.com:
+    extends:
+      file: base-intercept.yaml
+      service: api-base
+    container_name: api.b.example.com
+    ports:
+      - 4001:4000
+    environment:
+      - ORG=b
+      - PORT=4000
+    volumes:
+      - ../artifacts/hosts/b/api_hosts:/etc/hosts
+    depends_on:
+      - peer0.b.example.com
+      - peer1.b.example.com
+    
+
+  cli.example.com:
+    container_name: cli.example.com
+    extends:
+      file: base-intercept.yaml
+      service: cli-base
+    volumes:
+      - ../artifacts/crypto-config/ordererOrganizations/example.com/orderers/orderer.example.com/tls:/etc/hyperledger/crypto/orderer/tls
+
+  cli.b.example.com:
+    container_name: cli.b.example.com
+    extends:
+      service: cli.example.com
+    environment:
+      - CORE_PEER_LOCALMSPID=bMSP
+    volumes:
+    #    - ../artifacts/hosts/b/cli_hosts:/etc/hosts
+        - ../artifacts/crypto-config/peerOrganizations/b.example.com/users/Admin@b.example.com:/etc/hyperledger/crypto/peer
+    
+
+  cliNoCryptoVolume.b.example.com:
+    container_name: cliNoCryptoVolume.b.example.com
+    extends:
+      file: base-intercept.yaml
+      service: cli-base
+    environment:
+      - CORE_PEER_LOCALMSPID=bMSP
+    volumes:
+        - ../artifacts/hosts/b/cli_hosts:/etc/hosts
+
+  # simple http server to disseminate certificates
+  www.b.example.com:
+    extends:
+      file: base-intercept.yaml
+      service: www-base
+    container_name: www.b.example.com
+    ports:
+      - 8082:80
+
+  couchdb.b.example.com:
+    container_name: couchdb.b.example.com
+    image: hyperledger/fabric-couchdb:0.4.10
+    # Populate the COUCHDB_USER and COUCHDB_PASSWORD to set an admin user and password
+    # for CouchDB.  This will prevent CouchDB from operating in an "Admin Party" mode.
+#    environment:
+#      - COUCHDB_USER=
+#      - COUCHDB_PASSWORD=
+    # Comment/Uncomment the port mapping if you want to hide/expose the CouchDB service,
+    # for example map it to utilize Fauxton User Interface in dev environments.
+    ports:
+      - 6984:5984
