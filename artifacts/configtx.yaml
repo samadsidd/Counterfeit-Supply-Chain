@@ -149,4 +149,24 @@ Profiles:
                 - *a
                 - *b
                 - *c
-   
+    b-c:
+        Consortium: SampleConsortium
+        Application:
+            <<: *ApplicationDefaults
+            Organizations:
+                - *b
+                - *c
+    a-b:
+        Consortium: SampleConsortium
+        Application:
+            <<: *ApplicationDefaults
+            Organizations:
+                - *a
+                - *b
+    a-c:
+        Consortium: SampleConsortium
+        Application:
+            <<: *ApplicationDefaults
+            Organizations:
+                - *a
+                - *c

@@ -15,14 +15,14 @@ services:
     image: hyperledger/fabric-ca:latest
     environment:
       - FABRIC_CA_HOME=/etc/hyperledger/fabric-ca-server
-      - FABRIC_CA_SERVER_CA_NAME=ca-a
       - FABRIC_CA_SERVER_CA_CERTFILE=/etc/hyperledger/fabric-ca-server-config/ca.b.example.com-cert.pem
-      - FABRIC_CA_SERVER_CA_KEYFILE=/etc/hyperledger/fabric-ca-server-config/c2fc01c6731f22ebadc65b4274e0b4c4bb73490c96d217339962c3e9db912965_sk
+      - FABRIC_CA_SERVER_CA_NAME=ca-b
+      - FABRIC_CA_SERVER_CA_KEYFILE=/etc/hyperledger/fabric-ca-server-config/b9f275a9a2435e4325bcdfc9fd0741937825deb6bdc0dcbee7699c4cc29eb511_sk
       - FABRIC_CA_SERVER_TLS_ENABLED=true
       - FABRIC_CA_SERVER_TLS_CERTFILE=/etc/hyperledger/fabric-ca-server-config/ca.b.example.com-cert.pem
-      - FABRIC_CA_SERVER_TLS_KEYFILE=/etc/hyperledger/fabric-ca-server-config/c2fc01c6731f22ebadc65b4274e0b4c4bb73490c96d217339962c3e9db912965_sk
-#    ports:
-#      - 8054:7054
+      - FABRIC_CA_SERVER_TLS_KEYFILE=/etc/hyperledger/fabric-ca-server-config/b9f275a9a2435e4325bcdfc9fd0741937825deb6bdc0dcbee7699c4cc29eb511_sk
+    ports:
+      - 8054:7054
     command: sh -c 'fabric-ca-server start -b admin:adminpw -d'
     volumes:
       - ../artifacts/crypto-config/peerOrganizations/b.example.com/ca/:/etc/hyperledger/fabric-ca-server-config
@@ -39,8 +39,6 @@ services:
       - CORE_PEER_ADDRESS=peer0.b.example.com:7051
       - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
       - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb.b.example.com:5984
-      - CORE_PEER_GOSSIP_BOOTSTRAP=peer1.org1.example.com:8056
-      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.org1.example.com:8051
     ports:
       - 8051:7051
       - 8053:7053
@@ -63,8 +61,6 @@ services:
       - CORE_PEER_ADDRESS=peer1.b.example.com:7051
       - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
       - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb.b.example.com:5984
-      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.org1.example.com:8051
-      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer1.org1.example.com:8056
     ports:
       - 8056:7051
       - 8058:7053

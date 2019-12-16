@@ -15,7 +15,6 @@ services:
     image: hyperledger/fabric-ca:latest
     environment:
       - FABRIC_CA_HOME=/etc/hyperledger/fabric-ca-server
-      - FABRIC_CA_SERVER_CA_NAME=ca-a
       - FABRIC_CA_SERVER_CA_CERTFILE=/etc/hyperledger/fabric-ca-server-config/ca.ORG.DOMAIN-cert.pem
       - FABRIC_CA_SERVER_CA_KEYFILE=/etc/hyperledger/fabric-ca-server-config/CA_PRIVATE_KEY
       - FABRIC_CA_SERVER_TLS_ENABLED=true
@@ -39,8 +38,6 @@ services:
       - CORE_PEER_ADDRESS=peer0.ORG.DOMAIN:7051
       - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
       - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb.ORG.DOMAIN:5984
-      - CORE_PEER_GOSSIP_BOOTSTRAP=peer1.org1.example.com:PEER1_PORT
-      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.org1.example.com:PEER0_PORT
     ports:
       - PEER0_PORT:7051
       - PEER0_EVENT_PORT:7053
@@ -63,8 +60,6 @@ services:
       - CORE_PEER_ADDRESS=peer1.ORG.DOMAIN:7051
       - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
       - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb.ORG.DOMAIN:5984
-      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.org1.example.com:PEER0_PORT
-      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer1.org1.example.com:PEER1_PORT
     ports:
       - PEER1_PORT:7051
       - PEER1_EVENT_PORT:7053

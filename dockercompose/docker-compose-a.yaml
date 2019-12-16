@@ -15,14 +15,14 @@ services:
     image: hyperledger/fabric-ca:latest
     environment:
       - FABRIC_CA_HOME=/etc/hyperledger/fabric-ca-server
-      - FABRIC_CA_SERVER_CA_NAME=ca-a
       - FABRIC_CA_SERVER_CA_CERTFILE=/etc/hyperledger/fabric-ca-server-config/ca.a.example.com-cert.pem
-      - FABRIC_CA_SERVER_CA_KEYFILE=/etc/hyperledger/fabric-ca-server-config/c1f30008383965082a46d325d03fd9c0af5ce2ab02213254af1a9a8f6c7373e5_sk
+      - FABRIC_CA_SERVER_CA_NAME=ca-a
+      - FABRIC_CA_SERVER_CA_KEYFILE=/etc/hyperledger/fabric-ca-server-config/4e37e758a63d5dd5d6bcfda5407684a9090761fdcffddff80edc014001f2e1c2_sk
       - FABRIC_CA_SERVER_TLS_ENABLED=true
       - FABRIC_CA_SERVER_TLS_CERTFILE=/etc/hyperledger/fabric-ca-server-config/ca.a.example.com-cert.pem
-      - FABRIC_CA_SERVER_TLS_KEYFILE=/etc/hyperledger/fabric-ca-server-config/c1f30008383965082a46d325d03fd9c0af5ce2ab02213254af1a9a8f6c7373e5_sk
+      - FABRIC_CA_SERVER_TLS_KEYFILE=/etc/hyperledger/fabric-ca-server-config/4e37e758a63d5dd5d6bcfda5407684a9090761fdcffddff80edc014001f2e1c2_sk
     ports:
-     - 7054:7054
+      - 7054:7054
     command: sh -c 'fabric-ca-server start -b admin:adminpw -d'
     volumes:
       - ../artifacts/crypto-config/peerOrganizations/a.example.com/ca/:/etc/hyperledger/fabric-ca-server-config
@@ -39,9 +39,6 @@ services:
       - CORE_PEER_ADDRESS=peer0.a.example.com:7051
       - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
       - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb.a.example.com:5984
-      - CORE_PEER_GOSSIP_ENDPOINT=peer0.org1.example.com:7051
-      - CORE_PEER_GOSSIP_BOOTSTRAP=peer1.org1.example.com:7056
-      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.org1.example.com:7051
     ports:
       - 7051:7051
       - 7053:7053
@@ -64,9 +61,6 @@ services:
       - CORE_PEER_ADDRESS=peer1.a.example.com:7051
       - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
       - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb.a.example.com:5984
-      - CORE_PEER_GOSSIP_ENDPOINT=peer1.org1.example.com:7056
-      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.org1.example.com:7051
-      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer1.org1.example.com:7056
     ports:
       - 7056:7051
       - 7058:7053
