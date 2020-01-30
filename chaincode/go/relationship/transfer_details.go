@@ -31,9 +31,10 @@ type TransferDetailsKey struct {
 }
 
 type TransferDetailsValue struct {
-	Status    string `json:"status"`
-	Message   string `json:"message"`
-	Timestamp int64  `json:"timestamp"`
+	Status         string `json:"status"`
+	Message        string `json:"message"`
+	OwnerShipProof string `json:"ownershipProof"`
+	Timestamp      int64  `json:"timestamp"`
 }
 
 type TransferDetails struct {
@@ -57,6 +58,25 @@ type ProductValue struct {
 	LastUpdated int    `json:"lastUpdated"`
 	Owner       string `json:"owner"`
 	Label       string `json:"label"`
+}
+
+type RelationshipRequestDetails struct {
+	ObjectType      string `json:"docType"`
+	RequestSender   string `json:"requestSender"`
+	RequestReceiver string `json:"requestReceiver"`
+	Description     string `json:"description"`
+	Status          string `json:"status"`
+}
+
+type ProductRequestToManufacturerDetails struct {
+	ObjectType      string `json:"docType"`
+	RequestSender   string `json:"requestSender"`
+	RequestReceiver string `json:"requestReceiver"`
+	Message         string `json:"message"`
+	ProductKey      string `json:"productKey"`
+	Timestamp       int64  `json:"timestamp"`
+	Status          string `json:"status"`
+	OwnerShipProof  string `json:"ownershipProof"`
 }
 
 func (details *TransferDetails) FillFromArguments(args []string) error {

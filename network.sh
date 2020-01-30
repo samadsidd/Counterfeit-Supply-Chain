@@ -39,7 +39,7 @@ CLI_TIMEOUT=10000
 COMPOSE_TEMPLATE=$TEMPLATES_DOCKER_COMPOSE_FOLDER/docker-composetemplate.yaml
 COMPOSE_FILE_DEV=$TEMPLATES_DOCKER_COMPOSE_FOLDER/docker-composedev.yaml
 
-CHAINCODE_VERSION="5.7"
+CHAINCODE_VERSION="5.5"
 CHAINCODE_COMMON_NAME=reference
 CHAINCODE_BILATERAL_NAME=relationship
 CHAINCODE_COMMON_INIT='{"Args":["init","a","100","b","100"]}'
@@ -1155,11 +1155,9 @@ function upgradeCommonChaincode() {
 
 function upgradeBilateralChaincode() {
   installChaincode ${ORG1} ${CHAINCODE_BILATERAL_NAME} ${CHAINCODE_VERSION}
-  upgradeChaincode ${ORG1} ${CHAINCODE_BILATERAL_NAME} ${CHAINCODE_VERSION} ${CHAINCODE_BILATERAL_INIT} "${ORG1}-${ORG2}" \""${policy}"\"
+  upgradeChaincode ${ORG1} ${CHAINCODE_BILATERAL_NAME} ${CHAINCODE_VERSION} ${CHAINCODE_BILATERAL_INIT} common \""${policy}"\"
   installChaincode ${ORG2} ${CHAINCODE_BILATERAL_NAME} ${CHAINCODE_VERSION}
   installChaincode ${ORG3} ${CHAINCODE_BILATERAL_NAME} ${CHAINCODE_VERSION}
-  upgradeChaincode ${ORG1} ${CHAINCODE_BILATERAL_NAME} ${CHAINCODE_VERSION} ${CHAINCODE_BILATERAL_INIT} "${ORG1}-${ORG3}" \""${policy}"\"
-
 }
 
 
@@ -1242,16 +1240,17 @@ if [ "${MODE}" == "up" -a "${ORG}" == "" ]; then
   done
 
   createJoinInstantiateWarmUp ${ORG1} common ${CHAINCODE_COMMON_NAME} ${CHAINCODE_COMMON_INIT}
-  createJoinInstantiateWarmUp ${ORG1} "${ORG1}-${ORG2}" ${CHAINCODE_BILATERAL_NAME} ${CHAINCODE_BILATERAL_INIT}
-  createJoinInstantiateWarmUp ${ORG1} "${ORG1}-${ORG3}" ${CHAINCODE_BILATERAL_NAME} ${CHAINCODE_BILATERAL_INIT}
+  instantiateChaincode ${ORG1} common ${CHAINCODE_BILATERAL_NAME} ${CHAINCODE_BILATERAL_INIT}
+  # createJoinInstantiateWarmUp ${ORG1} "${ORG1}-${ORG2}" ${CHAINCODE_BILATERAL_NAME} ${CHAINCODE_BILATERAL_INIT}
+  # createJoinInstantiateWarmUp ${ORG1} "${ORG1}-${ORG3}" ${CHAINCODE_BILATERAL_NAME} ${CHAINCODE_BILATERAL_INIT}
 
   joinWarmUp ${ORG2} common ${CHAINCODE_COMMON_NAME}
-  joinWarmUp ${ORG2} "${ORG1}-${ORG2}" ${CHAINCODE_BILATERAL_NAME}
-  createJoinInstantiateWarmUp ${ORG2} "${ORG2}-${ORG3}" ${CHAINCODE_BILATERAL_NAME} ${CHAINCODE_BILATERAL_INIT}
+  # joinWarmUp ${ORG2} "${ORG1}-${ORG2}" ${CHAINCODE_BILATERAL_NAME}
+  # createJoinInstantiateWarmUp ${ORG2} "${ORG2}-${ORG3}" ${CHAINCODE_BILATERAL_NAME} ${CHAINCODE_BILATERAL_INIT}
 
   joinWarmUp ${ORG3} common ${CHAINCODE_COMMON_NAME}
-  joinWarmUp ${ORG3} "${ORG1}-${ORG3}" ${CHAINCODE_BILATERAL_NAME}
-  joinWarmUp ${ORG3} "${ORG2}-${ORG3}" ${CHAINCODE_BILATERAL_NAME}
+  # joinWarmUp ${ORG3} "${ORG1}-${ORG3}" ${CHAINCODE_BILATERAL_NAME}
+  # joinWarmUp ${ORG3} "${ORG2}-${ORG3}" ${CHAINCODE_BILATERAL_NAME}
 
 elif [ "${MODE}" == "down" ]; then
   for org in ${DOMAIN} ${ORG1} ${ORG2} ${ORG3}

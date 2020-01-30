@@ -74,6 +74,7 @@ type ProductValue struct {
 	LastUpdated int    `json:"lastUpdated"`
 	Owner       string `json:"owner"`
 	Label       string `json:"label"`
+	Name        string `json:"name"`
 }
 
 func (product *Product) FillFromArguments(args []string) error {
@@ -115,6 +116,7 @@ func (product *Product) FillFromArguments(args []string) error {
 	product.Value.Owner = owner
 	product.Value.LastUpdated = lastUpdated
 	product.Value.Label = label
+	product.Value.ObjectType = "product"
 
 	return nil
 }

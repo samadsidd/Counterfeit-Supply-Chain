@@ -1,22 +1,24 @@
 package main
 
 import (
-"crypto/x509"
-"encoding/json"
-"encoding/pem"
-"fmt"
-"strconv"
-"strings"
-"time"
+	"bytes"
+	"crypto/x509"
+	"encoding/json"
+	"encoding/pem"
+	"fmt"
+	"math/rand"
+	"strconv"
+	"strings"
+	"time"
 
-"github.com/hyperledger/fabric/core/chaincode/shim"
-pb "github.com/hyperledger/fabric/protos/peer"
+	"github.com/hyperledger/fabric/core/chaincode/shim"
+	pb "github.com/hyperledger/fabric/protos/peer"
 )
 
 var logger = shim.NewLogger("ProductChaincode")
 
 const (
-stateIndexName = "state~name"
+	stateIndexName = "state~name"
 )
 
 // ProductChaincode example simple Chaincode implementation
@@ -25,53 +27,66 @@ type ProductChaincode struct {
 
 // UserDetails Structure of Users
 type UserDetails struct {
-ObjectType string `json:"docType"`
-Name string `json:"name"`
-Phone int `json:"phone"`
+	ObjectType string `json:"docType"`
+	Name       string `json:"name"`
+	Phone      int    `json:"phone"`
+	Role       string `json:"role"`
+	Address    string `json:"address"`
+	TIN        string `json:"tin"`
+	GST        string `json:"gst"`
+	PAN        string `json:"pan"`
 }
 
 // Init initializes chaincode
 // ===========================
 func (t *ProductChaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
-logger.Debug("Init")
-return shim.Success(nil)
+	logger.Debug("Init")
+	return shim.Success(nil)
 }
 
 // Invoke - Our entry point for Invocations
 // ========================================
 func (t *ProductChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
-logger.Debug("Invoke")
+	logger.Debug("Invoke")
 
-function, args := stub.GetFunctionAndParameters()
-logger.Debug("invoke is running " + function)
+	function, args := stub.GetFunctionAndParameters()
+	logger.Debug("invoke is running " + function)
 
-// Handle different functions
-if function == "initProduct" { //create a new product
-return t.initProduct(stub, args)
-} else if function == "updateProduct" { //update an existing product
-return t.updateProduct(stub, args)
-} else if function == "updateOwner" { //update an owner of an existing product
-return t.updateOwner(stub, args)
-} else if function == "readProduct" { //read a product
-return t.readProduct(stub, args)
-} else if function == "queryProductsByOwner" { //find products for the owner X using rich query
-return t.queryProductsByOwner(stub, args)
-} else if function == "queryProducts" { //find products based on an ad hoc rich query
-return t.queryProducts(stub, args)
-} else if function == "getHistoryForProduct" { //get history of values for a product
-return t.getHistoryForProduct(stub, args)
-} else if function == "getProductsByLabel" { // Get product by label
-return t.queryProductsByLabel(stub, args)
-} else if function == "increaseQuantity" { // Increase Quantity
-return t.increaseQuantity(stub, args)
-} else if function == "createUser" {
-return t.createUser(stub, args)
-} else if function == "queryUser" {
-return t.queryUser(stub, args)
-}
+	// Handle different functions
+	if function == "initProduct" { //create a new product
+		return t.initProduct(stub, args)
+	} else if function == "updateProduct" { //update an existing product
+		return t.updateProduct(stub, args)
+	} else if function == "updateOwner" { //update an owner of an existing product
+		return t.updateOwner(stub, args)
+	} else if function == "readProduct" { //read a product
+		return t.readProduct(stub, args)
+	} else if function == "queryProductsByOwner" { //find products for the owner X using rich query
+		return t.queryProductsByOwner(stub, args)
+	} else if function == "queryProducts" { //find products based on an ad hoc rich query
+		return t.queryProducts(stub, args)
+	} else if function == "getHistoryForProduct" { //get history of values for a product
+		return t.getHistoryForProduct(stub, args)
+	} else if function == "getProductsByLabel" { // Get product by label
+		return t.queryProductsByLabel(stub, args)
+	} else if function == "increaseQuantity" { // Increase Quantity
+		return t.increaseQuantity(stub, args)
+	} else if function == "createUser" {
+		return t.createUser(stub, args)
+	} else if function == "queryUser" {
+		return t.queryUser(stub, args)
+	} else if function == "queryManufacturerByRole" {
+		return t.queryManufacturerByRole(stub, args)
+	} else if function == "queryDealerByRole" {
+		return t.queryDealerByRole(stub, args)
+	} else if function == "queryCustomerByRole" {
+		return t.queryCustomerByRole(stub, args)
+	} else if function == "queryProductsByName" {
+		return t.queryProductsByName(stub, args)
+	}
 
-logger.Debug("invoke did not find func: " + function) //error
-return pb.Response{Status: 403, Message: "Invalid invoke function name."}
+	logger.Debug("invoke did not find func: " + function) //error
+	return pb.Response{Status: 403, Message: "Invalid invoke function name."}
 }
 
 // ============================================================
@@ -79,129 +94,135 @@ return pb.Response{Status: 403, Message: "Invalid invoke function name."}
 // ============================================================
 func (t *ProductChaincode) initProduct(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 
-// For loop on quantity
-quantity, _ := strconv.Atoi(args[5])
+	// For loop on quantity
+	quantity, _ := strconv.Atoi(args[5])
 
-for i := 0; i < quantity; i++ {
+	for i := 0; i < quantity; i++ {
 
-finalProduct := args[0] + "_" + strconv.Itoa(i)
-var finalArgs []string
-finalArgs = append(finalArgs, finalProduct)
-finalArgs = append(finalArgs, args[1])
-finalArgs = append(finalArgs, args[2])
-finalArgs = append(finalArgs, args[3])
-finalArgs = append(finalArgs, args[4])
+		id := rand.New(rand.NewSource(time.Now().UnixNano()))
 
-var product Product
-if err := product.FillFromArguments(finalArgs); err != nil {
-return shim.Error(err.Error())
-}
+		toInt := id.Int()
+		tagID := strconv.Itoa(toInt)
 
-if product.ExistsIn(stub) {
-compositeKey, _ := product.ToCompositeKey(stub)
-return shim.Error(fmt.Sprintf("product with the key %s already exists", compositeKey))
-}
+		finalProduct := tagID
+		var finalArgs []string
+		finalArgs = append(finalArgs, finalProduct)
+		finalArgs = append(finalArgs, args[1])
+		finalArgs = append(finalArgs, args[2])
+		finalArgs = append(finalArgs, args[3])
+		finalArgs = append(finalArgs, args[4])
 
-// TODO: set owner from GetCreatorOrg
-product.Value.State = stateRegistered
+		var product Product
+		if err := product.FillFromArguments(finalArgs); err != nil {
+			return shim.Error(err.Error())
+		}
 
-if err := product.UpdateOrInsertIn(stub); err != nil {
-return shim.Error(err.Error())
-}
+		if product.ExistsIn(stub) {
+			compositeKey, _ := product.ToCompositeKey(stub)
+			return shim.Error(fmt.Sprintf("product with the key %s already exists", compositeKey))
+		}
 
-// TODO: think about index usability
-// ==== Index the product to enable state-based range queries, e.g. return all Active products ====
-// An 'index' is a normal key/value entry in state.
-// The key is a composite key, with the elements that you want to range query on listed first.
-// In our case, the composite key is based on stateIndexName~state~name.
-// This will enable very efficient state range queries based on composite keys matching stateIndexName~state~*
-//stateIndexKey, err := stub.CreateCompositeKey(stateIndexName, []string{strconv.Itoa(product.Value.State), product.Key.Name})
-//if err != nil {
-// return shim.Error(err.Error())
-//}
-//// Save index entry to state. Only the key name is needed, no need to store a duplicate copy of the product.
-//// Note - passing a 'nil' value will effectively delete the key from state, therefore we pass null character as value
-//value := []byte{0x00}
-//stub.PutState(stateIndexKey, value)
-}
-return shim.Success(nil)
+		// TODO: set owner from GetCreatorOrg
+		product.Value.State = stateRegistered
+		product.Value.Name = args[0]
+
+		if err := product.UpdateOrInsertIn(stub); err != nil {
+			return shim.Error(err.Error())
+		}
+
+		// TODO: think about index usability
+		// ==== Index the product to enable state-based range queries, e.g. return all Active products ====
+		// An 'index' is a normal key/value entry in state.
+		// The key is a composite key, with the elements that you want to range query on listed first.
+		// In our case, the composite key is based on stateIndexName~state~name.
+		// This will enable very efficient state range queries based on composite keys matching stateIndexName~state~*
+		//stateIndexKey, err := stub.CreateCompositeKey(stateIndexName, []string{strconv.Itoa(product.Value.State), product.Key.Name})
+		//if err != nil {
+		// return shim.Error(err.Error())
+		//}
+		//// Save index entry to state. Only the key name is needed, no need to store a duplicate copy of the product.
+		//// Note - passing a 'nil' value will effectively delete the key from state, therefore we pass null character as value
+		//value := []byte{0x00}
+		//stub.PutState(stateIndexKey, value)
+	}
+	return shim.Success(nil)
 
 }
 
 func (t *ProductChaincode) increaseQuantity(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 
-if len(args) < 2 {
-return shim.Error("Incorrect number of arguments. Expecting 2")
-}
+	if len(args) < 2 {
+		return shim.Error("Incorrect number of arguments. Expecting 2")
+	}
 
-// For loop on quantity
-label := strings.ToLower(args[0])
-quantity, _ := strconv.Atoi(args[1])
+	// For loop on quantity
+	label := strings.ToLower(args[0])
+	quantity, _ := strconv.Atoi(args[1])
 
-// Query DB to get last index
-queryString := fmt.Sprintf("{\"selector\":{\"label\":\"%s\"}}", label)
-queryResults, err := getQueryResultForQueryString(stub, queryString)
-if err != nil {
-return shim.Error(err.Error())
-}
+	// Query DB to get last index
+	queryString := fmt.Sprintf("{\"selector\":{\"label\":\"%s\"}}", label)
+	queryResults, err := getQueryResultForQueryString(stub, queryString)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
 
-// Get last element
-products := []Product{}
-err2 := json.Unmarshal(queryResults, &products)
-if err2 != nil {
-return shim.Error(fmt.Sprintf("product doesn't exist"))
-}
-productData := products[len(products)-1]
-productName := productData.Key.Name
-productNameSplit := strings.Split(productName, "_")
-productIndex, _ := strconv.Atoi(productNameSplit[len(productNameSplit)-1])
-productNameValue := productNameSplit[0]
-description := productData.Value.Desc
-owner := productData.Value.Owner
+	// Get last element
+	products := []Product{}
+	err2 := json.Unmarshal(queryResults, &products)
+	if err2 != nil {
+		return shim.Error(fmt.Sprintf("product doesn't exist"))
+	}
+	productData := products[len(products)-1]
+	productName := productData.Key.Name
+	productNameSplit := strings.Split(productName, "_")
+	productIndex, _ := strconv.Atoi(productNameSplit[len(productNameSplit)-1])
+	productNameValue := productNameSplit[0]
+	description := productData.Value.Desc
+	owner := productData.Value.Owner
 
-for i := 0; i < quantity; i++ {
+	for i := 0; i < quantity; i++ {
 
-finalProduct := productNameValue + "_" + strconv.Itoa(i+productIndex+1)
-var finalArgs []string
-finalArgs = append(finalArgs, finalProduct)
-finalArgs = append(finalArgs, description)
-finalArgs = append(finalArgs, "1")
-finalArgs = append(finalArgs, owner)
-finalArgs = append(finalArgs, label)
+		finalProduct := productNameValue + "_" + strconv.Itoa(i+productIndex+1)
+		var finalArgs []string
+		finalArgs = append(finalArgs, finalProduct)
+		finalArgs = append(finalArgs, description)
+		finalArgs = append(finalArgs, "1")
+		finalArgs = append(finalArgs, owner)
+		finalArgs = append(finalArgs, label)
 
-var product Product
-if err := product.FillFromArguments(finalArgs); err != nil {
-return shim.Error(err.Error())
-}
+		var product Product
+		if err := product.FillFromArguments(finalArgs); err != nil {
+			return shim.Error(err.Error())
+		}
 
-if product.ExistsIn(stub) {
-compositeKey, _ := product.ToCompositeKey(stub)
-return shim.Error(fmt.Sprintf("product with the key %s already exists", compositeKey))
-}
+		if product.ExistsIn(stub) {
+			compositeKey, _ := product.ToCompositeKey(stub)
+			return shim.Error(fmt.Sprintf("product with the key %s already exists", compositeKey))
+		}
 
-// TODO: set owner from GetCreatorOrg
-product.Value.State = stateRegistered
+		// TODO: set owner from GetCreatorOrg
+		product.Value.State = stateRegistered
 
-if err := product.UpdateOrInsertIn(stub); err != nil {
-return shim.Error(err.Error())
-}
+		if err := product.UpdateOrInsertIn(stub); err != nil {
+			return shim.Error(err.Error())
+		}
 
-// TODO: think about index usability
-// ==== Index the product to enable state-based range queries, e.g. return all Active products ====
-// An 'index' is a normal key/value entry in state.
-// The key is a composite key, with the elements that you want to range query on listed first.
-// In our case, the composite key is based on stateIndexName~state~name.
-// This will enable very efficient state range queries based on composite keys matching stateIndexName~state~*
-//stateIndexKey, err := stub.CreateCompositeKey(stateIndexName, []string{strconv.Itoa(product.Value.State), product.Key.Name})
-//if err != nil {
-// return shim.Error(err.Error())
-//}
-//// Save index entry to state. Only the key name is needed, no need to store a duplicate copy of the product.
-//// Note - passing a 'nil' value will effectively delete the key from state, therefore we pass null character as value
-//value := []byte{0x00}
-//stub.PutState(stateIndexKey, value)
-}
-return shim.Success(nil)
+		// TODO: think about index usability
+		// ==== Index the product to enable state-based range queries, e.g. return all Active products ====
+		// An 'index' is a normal key/value entry in state.
+		// The key is a composite key, with the elements that you want to range query on listed first.
+		// In our case, the composite key is based on stateIndexName~state~name.
+		// This will enable very efficient state range queries based on composite keys matching stateIndexName~state~*
+		//stateIndexKey, err := stub.CreateCompositeKey(stateIndexName, []string{strconv.Itoa(product.Value.State), product.Key.Name})
+		//if err != nil {
+		// return shim.Error(err.Error())
+		//}
+		//// Save index entry to state. Only the key name is needed, no need to store a duplicate copy of the product.
+		//// Note - passing a 'nil' value will effectively delete the key from state, therefore we pass null character as value
+		//value := []byte{0x00}
+		//stub.PutState(stateIndexKey, value)
+	}
+	return shim.Success(nil)
 
 }
 
@@ -209,101 +230,126 @@ return shim.Success(nil)
 // updateProduct - update an existing product, store into chaincode state
 // ============================================================
 func (t *ProductChaincode) updateProduct(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-var product, productToUpdate Product
-if err := product.FillFromArguments(args); err != nil {
-return shim.Error(err.Error())
-}
+	var product, productToUpdate Product
+	if err := product.FillFromArguments(args); err != nil {
+		return shim.Error(err.Error())
+	}
 
-productToUpdate.Key = product.Key
+	productToUpdate.Key = product.Key
 
-if !productToUpdate.ExistsIn(stub) {
-compositeKey, _ := productToUpdate.ToCompositeKey(stub)
-return shim.Error(fmt.Sprintf("product with the key %s doesn't exist", compositeKey))
-}
+	if !productToUpdate.ExistsIn(stub) {
+		compositeKey, _ := productToUpdate.ToCompositeKey(stub)
+		return shim.Error(fmt.Sprintf("product with the key %s doesn't exist", compositeKey))
+	}
 
-if err := productToUpdate.LoadFrom(stub); err != nil {
-return shim.Error(err.Error())
-}
+	if err := productToUpdate.LoadFrom(stub); err != nil {
+		return shim.Error(err.Error())
+	}
 
-if !checkStateValidity(productStateMachine, productToUpdate.Value.State, product.Value.State) {
-return shim.Error(fmt.Sprintf("product state cannot be updated from %d to %d",
-productToUpdate.Value.State, product.Value.State))
-}
+	if !checkStateValidity(productStateMachine, productToUpdate.Value.State, product.Value.State) {
+		return shim.Error(fmt.Sprintf("product state cannot be updated from %d to %d",
+			productToUpdate.Value.State, product.Value.State))
+	}
 
-// TODO; check if creator == productToUpdate owner
-if productToUpdate.Value.Owner != product.Value.Owner {
-return shim.Error(fmt.Sprintf("ownership cannot be transferred via product updating (from %s to %s)",
-productToUpdate.Value.Owner, product.Value.Owner))
-}
+	// TODO; check if creator == productToUpdate owner
+	if productToUpdate.Value.Owner != product.Value.Owner {
+		return shim.Error(fmt.Sprintf("ownership cannot be transferred via product updating (from %s to %s)",
+			productToUpdate.Value.Owner, product.Value.Owner))
+	}
 
-//oldState := productToUpdate.Value.State
+	//oldState := productToUpdate.Value.State
 
-productToUpdate.Value.Desc = product.Value.Desc
-productToUpdate.Value.State = product.Value.State
-productToUpdate.Value.LastUpdated = product.Value.LastUpdated
+	productToUpdate.Value.Desc = product.Value.Desc
+	productToUpdate.Value.State = product.Value.State
+	productToUpdate.Value.LastUpdated = product.Value.LastUpdated
 
-if err := productToUpdate.UpdateOrInsertIn(stub); err != nil {
-return shim.Error(err.Error())
-}
+	if err := productToUpdate.UpdateOrInsertIn(stub); err != nil {
+		return shim.Error(err.Error())
+	}
 
-//// maintain the index
-//if productToUpdate.Value.State != oldState {
-// //delete old index
-// stateIndexKey, err := stub.CreateCompositeKey(stateIndexName,
-// []string{strconv.Itoa(oldState), productToUpdate.Key.Name})
-// if err != nil {
-// return shim.Error(err.Error())
-// }
-//
-// // Delete index entry to state.
-// err = stub.DelState(stateIndexKey)
-// if err != nil {
-// return shim.Error("Failed to delete state:" + err.Error())
-// }
-// //create new index
-// stateIndexKey, err = stub.CreateCompositeKey(stateIndexName,
-// []string{strconv.Itoa(productToUpdate.Value.State), productToUpdate.Key.Name})
-// if err != nil {
-// return shim.Error(err.Error())
-// }
-// // Save index entry to state. Only the key name is needed, no need to store a duplicate copy of the product.
-// // Note - passing a 'nil' value will effectively delete the key from state, therefore we pass null character as value
-// value := []byte{0x00}
-// stub.PutState(stateIndexKey, value)
-//}
+	//// maintain the index
+	//if productToUpdate.Value.State != oldState {
+	// //delete old index
+	// stateIndexKey, err := stub.CreateCompositeKey(stateIndexName,
+	// []string{strconv.Itoa(oldState), productToUpdate.Key.Name})
+	// if err != nil {
+	// return shim.Error(err.Error())
+	// }
+	//
+	// // Delete index entry to state.
+	// err = stub.DelState(stateIndexKey)
+	// if err != nil {
+	// return shim.Error("Failed to delete state:" + err.Error())
+	// }
+	// //create new index
+	// stateIndexKey, err = stub.CreateCompositeKey(stateIndexName,
+	// []string{strconv.Itoa(productToUpdate.Value.State), productToUpdate.Key.Name})
+	// if err != nil {
+	// return shim.Error(err.Error())
+	// }
+	// // Save index entry to state. Only the key name is needed, no need to store a duplicate copy of the product.
+	// // Note - passing a 'nil' value will effectively delete the key from state, therefore we pass null character as value
+	// value := []byte{0x00}
+	// stub.PutState(stateIndexKey, value)
+	//}
 
-return shim.Success(nil)
+	return shim.Success(nil)
 }
 
 // ===============================================
 // readProduct - read a product from chaincode state
 // ===============================================
 func (t *ProductChaincode) readProduct(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-if len(args) < keyFieldsNumber {
-return shim.Error(fmt.Sprintf("incorrect number of arguments: expected %d, got %d",
-keyFieldsNumber, len(args)))
+	if len(args) < keyFieldsNumber {
+		return shim.Error(fmt.Sprintf("incorrect number of arguments: expected %d, got %d",
+			keyFieldsNumber, len(args)))
+	}
+
+	var product Product
+	if err := product.FillFromCompositeKeyParts(args); err != nil {
+		return shim.Error(err.Error())
+	}
+
+	if !product.ExistsIn(stub) {
+		compositeKey, _ := product.ToCompositeKey(stub)
+		return shim.Error(fmt.Sprintf("product with the key %s doesn't exist", compositeKey))
+	}
+
+	if err := product.LoadFrom(stub); err != nil {
+		return shim.Error(err.Error())
+	}
+
+	result, err := json.Marshal(product)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+
+	return shim.Success(result)
 }
 
-var product Product
-if err := product.FillFromCompositeKeyParts(args); err != nil {
-return shim.Error(err.Error())
-}
+// ===== Example: Parameterized rich query =================================================
+// queryProductsByOwner queries for products based on a passed in owner.
+// This is an example of a parameterized query where the query logic is baked into the chaincode,
+// and accepting a single query parameter (owner).
+// Only available on state databases that support rich query (e.g. CouchDB)
+// =========================================================================================
+func (t *ProductChaincode) queryProductsByName(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 
-if !product.ExistsIn(stub) {
-compositeKey, _ := product.ToCompositeKey(stub)
-return shim.Error(fmt.Sprintf("product with the key %s doesn't exist", compositeKey))
-}
+	// 0
+	// "bob"
+	if len(args) < 1 {
+		return shim.Error("Incorrect number of arguments. Expecting 1")
+	}
 
-if err := product.LoadFrom(stub); err != nil {
-return shim.Error(err.Error())
-}
+	name := args[0]
 
-result, err := json.Marshal(product)
-if err != nil {
-return shim.Error(err.Error())
-}
+	queryString := fmt.Sprintf("{\"selector\":{\"docType\":\"product\",\"name\":\"%s\"}}", name)
 
-return shim.Success(result)
+	queryResults, err := getQueryResultForQueryString(stub, queryString)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	return shim.Success(queryResults)
 }
 
 // ===== Example: Parameterized rich query =================================================
@@ -314,21 +360,21 @@ return shim.Success(result)
 // =========================================================================================
 func (t *ProductChaincode) queryProductsByOwner(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 
-// 0
-// "bob"
-if len(args) < 1 {
-return shim.Error("Incorrect number of arguments. Expecting 1")
-}
+	// 0
+	// "bob"
+	if len(args) < 1 {
+		return shim.Error("Incorrect number of arguments. Expecting 1")
+	}
 
-owner := strings.ToLower(args[0])
+	owner := strings.ToLower(args[0])
 
-queryString := fmt.Sprintf("{\"selector\":{\"docType\":\"product\",\"owner\":\"%s\"}}", owner)
+	queryString := fmt.Sprintf("{\"selector\":{\"docType\":\"product\",\"owner\":\"%s\"}}", owner)
 
-queryResults, err := getQueryResultForQueryString(stub, queryString)
-if err != nil {
-return shim.Error(err.Error())
-}
-return shim.Success(queryResults)
+	queryResults, err := getQueryResultForQueryString(stub, queryString)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	return shim.Success(queryResults)
 }
 
 // =======Rich queries =========================================================================
@@ -352,43 +398,43 @@ return shim.Success(queryResults)
 // Only available on state databases that support rich query (e.g. CouchDB)
 // =========================================================================================
 func (t *ProductChaincode) queryProducts(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-it, err := stub.GetStateByPartialCompositeKey(productIndex, []string{})
-if err != nil {
-return shim.Error(err.Error())
-}
-defer it.Close()
+	it, err := stub.GetStateByPartialCompositeKey(productIndex, []string{})
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	defer it.Close()
 
-entries := []Product{}
-for it.HasNext() {
-response, err := it.Next()
-if err != nil {
-return shim.Error(err.Error())
-}
+	entries := []Product{}
+	for it.HasNext() {
+		response, err := it.Next()
+		if err != nil {
+			return shim.Error(err.Error())
+		}
 
-entry := Product{}
+		entry := Product{}
 
-if err := entry.FillFromLedgerValue(response.Value); err != nil {
-return shim.Error(err.Error())
-}
+		if err := entry.FillFromLedgerValue(response.Value); err != nil {
+			return shim.Error(err.Error())
+		}
 
-_, compositeKeyParts, err := stub.SplitCompositeKey(response.Key)
-if err != nil {
-return shim.Error(err.Error())
-}
+		_, compositeKeyParts, err := stub.SplitCompositeKey(response.Key)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
 
-if err := entry.FillFromCompositeKeyParts(compositeKeyParts); err != nil {
-return shim.Error(err.Error())
-}
+		if err := entry.FillFromCompositeKeyParts(compositeKeyParts); err != nil {
+			return shim.Error(err.Error())
+		}
 
-entries = append(entries, entry)
-}
+		entries = append(entries, entry)
+	}
 
-result, err := json.Marshal(entries)
-if err != nil {
-return shim.Error(err.Error())
-}
+	result, err := json.Marshal(entries)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
 
-return shim.Success(result)
+	return shim.Success(result)
 }
 
 // =========================================================================================
@@ -397,234 +443,347 @@ return shim.Success(result)
 // =========================================================================================
 func getQueryResultForQueryString(stub shim.ChaincodeStubInterface, queryString string) ([]byte, error) {
 
-fmt.Printf("- getQueryResultForQueryString queryString:\n%s\n", queryString)
+	fmt.Printf("- getQueryResultForQueryString queryString:\n%s\n", queryString)
 
-resultsIterator, err := stub.GetQueryResult(queryString)
-if err != nil {
-return nil, err
-}
-defer resultsIterator.Close()
+	resultsIterator, err := stub.GetQueryResult(queryString)
+	if err != nil {
+		return nil, err
+	}
+	defer resultsIterator.Close()
 
-entries := []Product{}
+	entries := []Product{}
 
-for resultsIterator.HasNext() {
-response, err := resultsIterator.Next()
-if err != nil {
-return nil, err
-}
+	for resultsIterator.HasNext() {
+		response, err := resultsIterator.Next()
+		if err != nil {
+			return nil, err
+		}
 
-entry := Product{}
+		entry := Product{}
 
-if err := json.Unmarshal(response.Value, &entry.Value); err != nil {
-return nil, err
-}
+		if err := json.Unmarshal(response.Value, &entry.Value); err != nil {
+			return nil, err
+		}
 
-_, compositeKeyParts, err := stub.SplitCompositeKey(response.Key)
-if err != nil {
-return nil, err
-}
+		_, compositeKeyParts, err := stub.SplitCompositeKey(response.Key)
+		if err != nil {
+			return nil, err
+		}
 
-if err := entry.FillFromCompositeKeyParts(compositeKeyParts); err != nil {
-return nil, err
-}
+		if err := entry.FillFromCompositeKeyParts(compositeKeyParts); err != nil {
+			return nil, err
+		}
 
-entries = append(entries, entry)
-}
+		entries = append(entries, entry)
+	}
 
-result, err := json.Marshal(entries)
-if err != nil {
-return nil, err
-}
+	result, err := json.Marshal(entries)
+	if err != nil {
+		return nil, err
+	}
 
-return result, nil
+	return result, nil
 }
 
 func (t *ProductChaincode) getHistoryForProduct(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-var product Product
-if err := product.FillFromCompositeKeyParts(args); err != nil {
-return shim.Error(err.Error())
-}
+	var product Product
+	if err := product.FillFromCompositeKeyParts(args); err != nil {
+		return shim.Error(err.Error())
+	}
 
-compositeKey, err := product.ToCompositeKey(stub)
-if err != nil {
-return shim.Error(err.Error())
-}
+	compositeKey, err := product.ToCompositeKey(stub)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
 
-resultsIterator, err := stub.GetHistoryForKey(compositeKey)
-if err != nil {
-return shim.Error(err.Error())
-}
-defer resultsIterator.Close()
+	resultsIterator, err := stub.GetHistoryForKey(compositeKey)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	defer resultsIterator.Close()
 
-type productHistory struct {
-Value ProductValue `json:"value"`
-TxId string `json:"txId"`
-Timestamp string `json:"timestamp"`
-IsDelete bool `json:"isDelete"`
-}
+	type productHistory struct {
+		Value     ProductValue `json:"value"`
+		TxId      string       `json:"txId"`
+		Timestamp string       `json:"timestamp"`
+		IsDelete  bool         `json:"isDelete"`
+	}
 
-entries := []productHistory{}
+	entries := []productHistory{}
 
-for resultsIterator.HasNext() {
-response, err := resultsIterator.Next()
-if err != nil {
-return shim.Error(err.Error())
-}
+	for resultsIterator.HasNext() {
+		response, err := resultsIterator.Next()
+		if err != nil {
+			return shim.Error(err.Error())
+		}
 
-entry := productHistory{}
+		entry := productHistory{}
 
-if err := json.Unmarshal(response.Value, &entry.Value); err != nil {
-return shim.Error(err.Error())
-}
+		if err := json.Unmarshal(response.Value, &entry.Value); err != nil {
+			return shim.Error(err.Error())
+		}
 
-entry.TxId = response.TxId
-entry.Timestamp = time.Unix(response.Timestamp.Seconds, int64(response.Timestamp.Nanos)).String()
-entry.IsDelete = response.IsDelete
+		entry.TxId = response.TxId
+		entry.Timestamp = time.Unix(response.Timestamp.Seconds, int64(response.Timestamp.Nanos)).String()
+		entry.IsDelete = response.IsDelete
 
-entries = append(entries, entry)
-}
+		entries = append(entries, entry)
+	}
 
-result, err := json.Marshal(entries)
-if err != nil {
-return shim.Error(err.Error())
-}
+	result, err := json.Marshal(entries)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
 
-return shim.Success(result)
+	return shim.Success(result)
 }
 
 func (t *ProductChaincode) queryProductsByLabel(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-if len(args) < 1 {
-return shim.Error("Incorrect number of arguments. Expecting 1")
-}
+	if len(args) < 1 {
+		return shim.Error("Incorrect number of arguments. Expecting 1")
+	}
 
-label := strings.ToLower(args[0])
+	label := strings.ToLower(args[0])
 
-queryString := fmt.Sprintf("{\"selector\":{\"label\":\"%s\"}}", label)
+	queryString := fmt.Sprintf("{\"selector\":{\"label\":\"%s\"}}", label)
 
-queryResults, err := getQueryResultForQueryString(stub, queryString)
-if err != nil {
-return shim.Error(err.Error())
-}
-return shim.Success(queryResults)
+	queryResults, err := getQueryResultForQueryString(stub, queryString)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	return shim.Success(queryResults)
 }
 
 func (t *ProductChaincode) updateOwner(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-// 0 1 2 3
-// productName, oldOwner, newOwner, timestamp
-const expectedArgumentsNumber = 4
-if len(args) < expectedArgumentsNumber {
-return shim.Error(fmt.Sprintf("incorrect number of arguments: expected %d, got %d",
-expectedArgumentsNumber, len(args)))
-}
+	// 0 1 2 3
+	// productName, oldOwner, newOwner, timestamp
+	const expectedArgumentsNumber = 4
+	if len(args) < expectedArgumentsNumber {
+		return shim.Error(fmt.Sprintf("incorrect number of arguments: expected %d, got %d",
+			expectedArgumentsNumber, len(args)))
+	}
 
-var product Product
-if err := product.FillFromCompositeKeyParts(args[:keyFieldsNumber]); err != nil {
-return shim.Error(err.Error())
-}
+	var product Product
+	if err := product.FillFromCompositeKeyParts(args[:keyFieldsNumber]); err != nil {
+		return shim.Error(err.Error())
+	}
 
-// ==== Input sanitation ====
-for k, v := range args[1:] {
-if len(v) == 0 {
-return shim.Error(fmt.Sprintf("argument #%d must be a non-empty string", k+1))
-}
-}
+	// ==== Input sanitation ====
+	for k, v := range args[1:] {
+		if len(v) == 0 {
+			return shim.Error(fmt.Sprintf("argument #%d must be a non-empty string", k+1))
+		}
+	}
 
-oldOwner := args[keyFieldsNumber]
-newOwner := args[keyFieldsNumber+1]
-lastUpdated, err := strconv.Atoi(args[keyFieldsNumber+2])
-if err != nil {
-return shim.Error(fmt.Sprintf("product last change time is invalid: %s (must be int)",
-args[keyFieldsNumber+2]))
-}
+	oldOwner := args[keyFieldsNumber]
+	newOwner := args[keyFieldsNumber+1]
+	lastUpdated, err := strconv.Atoi(args[keyFieldsNumber+2])
+	if err != nil {
+		return shim.Error(fmt.Sprintf("product last change time is invalid: %s (must be int)",
+			args[keyFieldsNumber+2]))
+	}
 
-// TODO: check if creator org and oldOwner are the same
-//if GetCreatorOrganization(stub) != oldOwner {
-// return shim.Error(fmt.Sprintf("no privileges to send request from the side of %s", oldOwner))
-//}
+	// TODO: check if creator org and oldOwner are the same
+	//if GetCreatorOrganization(stub) != oldOwner {
+	// return shim.Error(fmt.Sprintf("no privileges to send request from the side of %s", oldOwner))
+	//}
 
-if !product.ExistsIn(stub) {
-compositeKey, _ := product.ToCompositeKey(stub)
-return shim.Error(fmt.Sprintf("product with the key %s doesn't exist", compositeKey))
-}
+	if !product.ExistsIn(stub) {
+		compositeKey, _ := product.ToCompositeKey(stub)
+		return shim.Error(fmt.Sprintf("product with the key %s doesn't exist", compositeKey))
+	}
 
-if err := product.LoadFrom(stub); err != nil {
-return shim.Error(err.Error())
-}
+	if err := product.LoadFrom(stub); err != nil {
+		return shim.Error(err.Error())
+	}
 
-if product.Value.Owner != oldOwner {
-return shim.Error("the specified product doesn't belong to the specified owner")
-}
+	if product.Value.Owner != oldOwner {
+		return shim.Error("the specified product doesn't belong to the specified owner")
+	}
 
-product.Value.Owner = newOwner
-product.Value.LastUpdated = lastUpdated
+	product.Value.Owner = newOwner
+	product.Value.LastUpdated = lastUpdated
 
-if err := product.UpdateOrInsertIn(stub); err != nil {
-return shim.Error(err.Error())
-}
+	if err := product.UpdateOrInsertIn(stub); err != nil {
+		return shim.Error(err.Error())
+	}
 
-return shim.Success(nil)
+	return shim.Success(nil)
 }
 
 func getOrganization(certificate []byte) string {
-data := certificate[strings.Index(string(certificate), "-----") : strings.LastIndex(string(certificate), "-----")+5]
-block, _ := pem.Decode([]byte(data))
-cert, _ := x509.ParseCertificate(block.Bytes)
-organization := cert.Issuer.Organization[0]
-return strings.Split(organization, ".")[0]
+	data := certificate[strings.Index(string(certificate), "-----") : strings.LastIndex(string(certificate), "-----")+5]
+	block, _ := pem.Decode([]byte(data))
+	cert, _ := x509.ParseCertificate(block.Bytes)
+	organization := cert.Issuer.Organization[0]
+	return strings.Split(organization, ".")[0]
 }
 
 func GetCreatorOrganization(stub shim.ChaincodeStubInterface) string {
-certificate, _ := stub.GetCreator()
-return getOrganization(certificate)
+	certificate, _ := stub.GetCreator()
+	return getOrganization(certificate)
 }
 
 func (t *ProductChaincode) createUser(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-if len(args) < 4 {
-return shim.Error("Incorrect number of arguments. Expecting 4")
-}
+	if len(args) < 4 {
+		return shim.Error("Incorrect number of arguments. Expecting 4")
+	}
 
-userAsByte, err := stub.GetState(args[1])
-if err != nil {
-return shim.Error("Failed to get user: " + err.Error())
-} else if userAsByte != nil {
-fmt.Println("This user already exists: " + args[1])
-return shim.Error("This user already exists: " + args[1])
-}
+	userAsByte, err := stub.GetState(args[1])
+	if err != nil {
+		return shim.Error("Failed to get user: " + err.Error())
+	} else if userAsByte != nil {
+		fmt.Println("This user already exists: " + args[1])
+		return shim.Error("This user already exists: " + args[1])
+	}
 
-logger.Debug("Args:"+args[0]+args[1], args[2], args[3])
-Phone, _ := strconv.Atoi(args[2])
-Name := strings.ToLower(args[0])
+	logger.Debug("Args:"+args[0]+args[1], args[2], args[3])
+	Phone, _ := strconv.Atoi(args[2])
+	Name := strings.ToLower(args[0])
+	Role := strings.ToLower(args[3])
+	objectType := strings.ToLower(args[3])
+	Address := strings.ToLower(args[4])
+	TIN := strings.ToLower(args[5])
+	GST := strings.ToLower(args[6])
+	PAN := strings.ToLower(args[7])
 
-objectType := args[3]
+	userDetails := &UserDetails{objectType, Name, Phone, Role, Address, TIN, GST, PAN}
+	userAsBytes, err := json.Marshal(userDetails)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
 
-userDetails := &UserDetails{objectType, Name, Phone}
-userAsBytes, err := json.Marshal(userDetails)
-if err != nil {
-return shim.Error(err.Error())
-}
+	logger.Debug("Success:" + string(userAsBytes))
 
-logger.Debug("Success:" + string(userAsBytes))
-
-err = stub.PutState(args[1], userAsBytes)
-if err != nil {
-return shim.Error(err.Error())
-}
-return shim.Success(nil)
+	err = stub.PutState(args[1], userAsBytes)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	return shim.Success(nil)
 }
 
 func (t *ProductChaincode) queryUser(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-if len(args) < 1 {
-return shim.Error("Incorrect number of arguments. Expecting 2")
+	if len(args) < 1 {
+		return shim.Error("Incorrect number of arguments. Expecting 2")
+	}
+
+	userDetails, _ := stub.GetState(args[0])
+	logger.Debug("Success:" + string(userDetails))
+	return shim.Success(userDetails)
 }
 
-userDetails, _ := stub.GetState(args[0])
-logger.Debug("Success:" + string(userDetails))
-return shim.Success(userDetails)
+func (t *ProductChaincode) queryManufacturerByRole(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	if len(args) < 1 {
+		return shim.Error("Incorrect number of arguments. Expecting 1")
+	}
+
+	role := strings.ToLower(args[0])
+
+	queryString := fmt.Sprintf("{\"selector\":{\"docType\":\"manufacturer\",\"role\":\"%s\"}}", role)
+
+	queryResults, err := getQueryResultForQueryStringForUser(stub, queryString)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	return shim.Success(queryResults)
+}
+
+func (t *ProductChaincode) queryDealerByRole(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	if len(args) < 1 {
+		return shim.Error("Incorrect number of arguments. Expecting 1")
+	}
+
+	role := strings.ToLower(args[0])
+
+	logger.Debug("role----" + role)
+
+	queryString := fmt.Sprintf("{\"selector\":{\"docType\":\"dealer\",\"role\":\"%s\"}}", role)
+
+	logger.Debug("query---" + queryString)
+
+	queryResults, err := getQueryResultForQueryStringForUser(stub, queryString)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	return shim.Success(queryResults)
+}
+
+func (t *ProductChaincode) queryCustomerByRole(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	if len(args) < 1 {
+		return shim.Error("Incorrect number of arguments. Expecting 1")
+	}
+
+	role := strings.ToLower(args[0])
+
+	logger.Debug("role----" + role)
+
+	queryString := fmt.Sprintf("{\"selector\":{\"docType\":\"customer\",\"role\":\"%s\"}}", role)
+
+	queryResults, err := getQueryResultForQueryStringForUser(stub, queryString)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	return shim.Success(queryResults)
+}
+
+func getQueryResultForQueryStringForUser(stub shim.ChaincodeStubInterface, queryString string) ([]byte, error) {
+
+	fmt.Printf("- getQueryResultForQueryString queryString:\n%s\n", queryString)
+
+	resultsIterator, err := stub.GetQueryResult(queryString)
+	if err != nil {
+		return nil, err
+	}
+	defer resultsIterator.Close()
+
+	buffer, err := constructQueryResponseFromIterator(resultsIterator)
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Printf("- getQueryResultForQueryString queryResult:\n%s\n", buffer.String())
+
+	return buffer.Bytes(), nil
+}
+
+// ===========================================================================================
+// constructQueryResponseFromIterator constructs a JSON array containing query results from
+// a given result iterator
+// ===========================================================================================
+func constructQueryResponseFromIterator(resultsIterator shim.StateQueryIteratorInterface) (*bytes.Buffer, error) {
+	// buffer is a JSON array containing QueryResults
+	var buffer bytes.Buffer
+	buffer.WriteString("[")
+
+	bArrayMemberAlreadyWritten := false
+	for resultsIterator.HasNext() {
+		queryResponse, err := resultsIterator.Next()
+		if err != nil {
+			return nil, err
+		}
+		// Add a comma before array members, suppress it for the first array member
+		if bArrayMemberAlreadyWritten == true {
+			buffer.WriteString(",")
+		}
+		buffer.WriteString("{\"Key\":")
+		buffer.WriteString("\"")
+		buffer.WriteString(queryResponse.Key)
+		buffer.WriteString("\"")
+
+		buffer.WriteString(", \"Record\":")
+		// Record is a JSON object, so we write as-is
+		buffer.WriteString(string(queryResponse.Value))
+		buffer.WriteString("}")
+		bArrayMemberAlreadyWritten = true
+	}
+	buffer.WriteString("]")
+
+	return &buffer, nil
 }
 
 func main() {
-err := shim.Start(new(ProductChaincode))
-if err != nil {
-logger.Error(err.Error())
-}
+	err := shim.Start(new(ProductChaincode))
+	if err != nil {
+		logger.Error(err.Error())
+	}
 }

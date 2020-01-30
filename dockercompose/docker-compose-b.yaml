@@ -15,12 +15,12 @@ services:
     image: hyperledger/fabric-ca:latest
     environment:
       - FABRIC_CA_HOME=/etc/hyperledger/fabric-ca-server
-      - FABRIC_CA_SERVER_CA_CERTFILE=/etc/hyperledger/fabric-ca-server-config/ca.b.example.com-cert.pem
       - FABRIC_CA_SERVER_CA_NAME=ca-b
-      - FABRIC_CA_SERVER_CA_KEYFILE=/etc/hyperledger/fabric-ca-server-config/b9f275a9a2435e4325bcdfc9fd0741937825deb6bdc0dcbee7699c4cc29eb511_sk
+      - FABRIC_CA_SERVER_CA_CERTFILE=/etc/hyperledger/fabric-ca-server-config/ca.b.example.com-cert.pem
+      - FABRIC_CA_SERVER_CA_KEYFILE=/etc/hyperledger/fabric-ca-server-config/6299b1ac78d57174fb86f6c2babe66049a6bd3e019a2918280eaa3cbd8c4d5db_sk
       - FABRIC_CA_SERVER_TLS_ENABLED=true
       - FABRIC_CA_SERVER_TLS_CERTFILE=/etc/hyperledger/fabric-ca-server-config/ca.b.example.com-cert.pem
-      - FABRIC_CA_SERVER_TLS_KEYFILE=/etc/hyperledger/fabric-ca-server-config/b9f275a9a2435e4325bcdfc9fd0741937825deb6bdc0dcbee7699c4cc29eb511_sk
+      - FABRIC_CA_SERVER_TLS_KEYFILE=/etc/hyperledger/fabric-ca-server-config/6299b1ac78d57174fb86f6c2babe66049a6bd3e019a2918280eaa3cbd8c4d5db_sk
     ports:
       - 8054:7054
     command: sh -c 'fabric-ca-server start -b admin:adminpw -d'
